@@ -1,15 +1,17 @@
+//negligable bug: sometimes clicking on a combo box after navigating through months using faded NumPanels
+//	triggers two action events
+
 package goalkeeper.calendar;
+
 
 import java.awt.*;
 import java.awt.event.*;
-
 import javax.swing.*;
 import javax.swing.border.*;
-
 import java.text.*;
 import java.util.*;
 
-public class GkCalendarPanel extends JPanel {
+public class GkCalendarPanel extends JPanel{
 	final static String[] months = {"January","February","March","April","May","June",
 		"July","August","September","October","November","December"};
 	final static String[] days = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
@@ -20,7 +22,7 @@ public class GkCalendarPanel extends JPanel {
 	final static int u = (defaultHeight / 16);//length unit to maintain size proportions of subcomponents
 	final static Color defaultColorScheme = (new Color(50,150,255));
 	
-	private static NumPanel lastSelectedNumPanel; //most recently clicked NumPanel
+	private static NumPanel lastSelectedNumPanel; // most recently selected NumPanel
 	
 	private int width, height;
 	private JComboBox yearBox, monthBox;
@@ -33,8 +35,8 @@ public class GkCalendarPanel extends JPanel {
 	
 	private Calendar calendar;
 	private int year, month, date;//most recently selected calendar field values
-	private int selectedPanel;//index of selected NumPanel
-	
+	private ArrayList<ActionListener> listeners = new ArrayList<ActionListener>();
+
 	
 	public GkCalendarPanel(){
 		this.setSize(defaultWidth, defaultHeight);
@@ -105,10 +107,10 @@ public class GkCalendarPanel extends JPanel {
 		//change comboBox text to match selected year/month
 		yearBox.getEditor().setItem(String.valueOf(year));
 		monthBox.getEditor().setItem(months[month - 1]);
-		
+		//set calendar to first day of selected month
 		calendar.set(year, month-1, 1);
 		int weekday = calendar.get(Calendar.DAY_OF_WEEK);
-		calendar.add(Calendar.DATE, -1*(weekday - 1));
+		calendar.add(Calendar.DATE, -1*(weekday - 1));//set calendar to first day of selected week
 		//iterate through all NumPanels
 		for(int y = 0;y < 6;y++){
 			for(int x = 0;x < 7; x++){
@@ -137,6 +139,7 @@ public class GkCalendarPanel extends JPanel {
 					try{year = Integer.parseInt((String)((JComboBox)event.getSource()).getSelectedItem());}
 						catch(NumberFormatException e){}
 				updateCalendar();
+				makeEvent();
 		}
 	}
 		
@@ -148,13 +151,25 @@ public class GkCalendarPanel extends JPanel {
 				if(monthIn.equalsIgnoreCase(months[x])){
 					month = x+1;
 					updateCalendar();
+					makeEvent();
 					break;
 				}
 			}
 		}
 	}
 	
+	public void addActionListener(ActionListener listener){listeners.add(listener);}
+	public void removeActionListener(ActionListener listener){listeners.remove(listener);}
+	//send an actionEvent with "yyyy-MM-dd" as the command string
+	private void makeEvent(){
+		String formattedCommand = String.valueOf(year) + "-" + String.format("%02d", month) + "-" + String.valueOf(date);
+		ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, formattedCommand);
+		for(ActionListener listener : listeners)
+			listener.actionPerformed(event);
+	}
 	
+	
+//(Inner Class) subclass of JPanel for date items on GkCalendar	**************************************************
 	private class NumPanel extends JPanel implements MouseListener{
 		private JLabel numLabel;
 		private String id;
@@ -219,7 +234,7 @@ public class GkCalendarPanel extends JPanel {
 			g.fillRect(1,1,this.getWidth()-2,this.getHeight()-2);//fill center of NumPanel
 		}
 		
-		//assign String + int values & repaint
+		//assign String + int values
 		public void setValues(int v, String s){
 			value = v;
 			id = s;
@@ -228,8 +243,9 @@ public class GkCalendarPanel extends JPanel {
 		
 		//select this numpanel & deselect previously-selected numpanel
 		public void toggleSelection(){
-			if(lastSelectedNumPanel==null || lastSelectedNumPanel.equals(this))
+			if(lastSelectedNumPanel==null || lastSelectedNumPanel.equals(this)){
 				isSelected = !isSelected;
+			}
 			else{
 				lastSelectedNumPanel.isSelected = false;
 				lastSelectedNumPanel.repaint();
@@ -240,15 +256,18 @@ public class GkCalendarPanel extends JPanel {
 			//read month from this.id
 			int newMonth = Integer.parseInt(id.substring(5,7));
 			//if new month has been selected, update calendar
+			if(isSelected && !faded)
+				makeEvent();
 			if(month != newMonth){
 				month = newMonth;
 				year = Integer.parseInt(id.substring(0,4));
+				makeEvent();
 				updateCalendar();
 			}
 			else
 				repaint();
+			
 		}
-		
 		//(implemented) MouseEvents for NumPanel (listener added to NumLabel in constructor)
 		public void mouseClicked(MouseEvent e) {}
 		public void mouseEntered(MouseEvent e) {}
@@ -256,4 +275,6 @@ public class GkCalendarPanel extends JPanel {
 		public void mousePressed(MouseEvent e) {toggleSelection();}
 		public void mouseReleased(MouseEvent e) {}
 	}
+
+
 }
