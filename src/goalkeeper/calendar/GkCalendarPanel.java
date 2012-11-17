@@ -1,6 +1,7 @@
-//negligable bug: sometimes clicking on a combo box after navigating through months using faded NumPanels
-//	triggers two action events
+/*negligable bug: sometimes clicking on a combo box triggers two action events
+		to reproduce, click a faded NumPanel (to change month), then click textFields of yearBox, monthBox, yearBox (in that order)
 
+*/
 package goalkeeper.calendar;
 
 
@@ -136,10 +137,10 @@ public class GkCalendarPanel extends JPanel{
 	//yearBox action handler
 	private class YearBoxHandler implements ActionListener{
 		public void actionPerformed(ActionEvent event){
-					try{year = Integer.parseInt((String)((JComboBox)event.getSource()).getSelectedItem());}
-						catch(NumberFormatException e){}
-				updateCalendar();
-				makeEvent();
+			try{year = Integer.parseInt((String)((JComboBox)event.getSource()).getSelectedItem());}
+				catch(NumberFormatException e){}
+			updateCalendar();
+			makeEvent();
 		}
 	}
 		
@@ -243,9 +244,8 @@ public class GkCalendarPanel extends JPanel{
 		
 		//select this numpanel & deselect previously-selected numpanel
 		public void toggleSelection(){
-			if(lastSelectedNumPanel==null || lastSelectedNumPanel.equals(this)){
+			if(lastSelectedNumPanel==null || lastSelectedNumPanel.equals(this))
 				isSelected = !isSelected;
-			}
 			else{
 				lastSelectedNumPanel.isSelected = false;
 				lastSelectedNumPanel.repaint();
@@ -256,17 +256,15 @@ public class GkCalendarPanel extends JPanel{
 			//read month from this.id
 			int newMonth = Integer.parseInt(id.substring(5,7));
 			//if new month has been selected, update calendar
-			if(isSelected && !faded)
-				makeEvent();
 			if(month != newMonth){
 				month = newMonth;
 				year = Integer.parseInt(id.substring(0,4));
 				makeEvent();
 				updateCalendar();
 			}
-			else
-				repaint();
-			
+			else if(isSelected && !faded)
+				makeEvent();
+			repaint();
 		}
 		//(implemented) MouseEvents for NumPanel (listener added to NumLabel in constructor)
 		public void mouseClicked(MouseEvent e) {}
@@ -275,6 +273,4 @@ public class GkCalendarPanel extends JPanel{
 		public void mousePressed(MouseEvent e) {toggleSelection();}
 		public void mouseReleased(MouseEvent e) {}
 	}
-
-
 }
