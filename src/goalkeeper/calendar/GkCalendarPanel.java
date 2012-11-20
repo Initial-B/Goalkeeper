@@ -161,14 +161,23 @@ public class GkCalendarPanel extends JPanel{
 	
 	public void addActionListener(ActionListener listener){listeners.add(listener);}
 	public void removeActionListener(ActionListener listener){listeners.remove(listener);}
+	//send an actionEvent with "yyyyMMdd" as the command string
+	private void makeEvent(){
+		String digitString = String.valueOf(year*10000 + month*100 + date);
+		ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, digitString);
+		for(ActionListener listener : listeners)
+			listener.actionPerformed(event);
+	}
+	
 	//send an actionEvent with "yyyy-MM-dd" as the command string
+	/*
 	private void makeEvent(){
 		String formattedCommand = String.valueOf(year) + "-" + String.format("%02d", month) + "-" + String.valueOf(date);
 		ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, formattedCommand);
 		for(ActionListener listener : listeners)
 			listener.actionPerformed(event);
 	}
-	
+	*/
 	
 //(Inner Class) subclass of JPanel for date items on GkCalendar	**************************************************
 	private class NumPanel extends JPanel implements MouseListener{
