@@ -21,10 +21,17 @@ public class Planner {
 			return retDay;
 		}
 	}
+	public void addTask(int ymd, String n){
+		getDay(ymd).addTask(n);
+	}
+	
+	public ArrayList<Task> getTasks(int ymd){
+		return getDay(ymd).tasks;
+	}
 	
 	
 	
-	private class Day{
+	public class Day{
 		private int hashDate;//date as int YYYYMMDD 
 		private ArrayList<Task> tasks;
 		
@@ -38,7 +45,7 @@ public class Planner {
 		}
 	}
 	
-	private class Task{
+	public class Task{
 		private String name;
 		private Goal relatedGoal;
 		private boolean completed;
@@ -48,6 +55,7 @@ public class Planner {
 			completed = false;
 		}
 		public void setGoal(Goal g){relatedGoal = g;}
+		public String getName(){return name;}
 	}
 	
 	private class Goal{

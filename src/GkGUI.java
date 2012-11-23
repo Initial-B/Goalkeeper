@@ -19,7 +19,10 @@ public class GkGUI extends JFrame{
 	private Planner planner;
 	private GkCalendarPanel calendarPanel;
 	
-	public void setPlanner(Planner p){planner = p;}
+	public void setPlanner(Planner p){
+		planner = p;
+		calendarPanel.ping();
+	}
 	
 	public GkGUI(){
 		//configure main GUI window
@@ -55,20 +58,31 @@ public class GkGUI extends JFrame{
 	//actionlistener to read date from calendarpanel
 	public class DateListener implements ActionListener{
 		public void actionPerformed(ActionEvent e) {
-			System.out.println("The date is: " + e.getActionCommand());
+			int ymdInt = Integer.valueOf(e.getActionCommand());
+			System.out.println("The date is: " + ymdInt);
+			for(int x = 0;x < taskPanel.itemList.size();x++){
+				try{//if task exists for item slot in taskPanel, update item label
+					taskPanel.itemList.get(x).setText(planner.getTasks(ymdInt).get(x).getName());
+				}catch(IndexOutOfBoundsException exception){//if task DNE, set label's text blank
+					taskPanel.itemList.get(x).setText("");
+				}
+			taskPanel.itemList.get(x).repaint();
+			}
 		}
 	}
 	//(component) JPanel with white bg, regular JLabels separated by dotted lines,
 	//				and a left side column for checkboxes
 	private class TaskPanel extends JPanel{
 		final static private int itemSpacing = 38; //default pixel spacing for items 
+		final static private int itemFontSize = 12;//default itemLabel font size
 		private ArrayList<JLabel> itemList;
 		
 		public TaskPanel(){
+			itemList = new ArrayList<JLabel>();
 			setBackground(Color.white);
 			setLayout(null);
-		
 		}
+		
 		//(override) paint inner area of numPanel based on value of isSelected
 		public void paintComponent(Graphics g){
 			super.paintComponent(g);
@@ -87,16 +101,25 @@ public class GkGUI extends JFrame{
 			g2d.draw(line);
 			
 		}
-		public void fillTasks(){
-			
-			System.out.println("setting size of taskPanel");
+		//instantiate JLabels in itemList based on component size
+		public void fillItems(){
+			itemList.clear();
 			for(double y = 0; y < getHeight();y+=itemSpacing){
-				JLabel itemLabel =  new JLabel("test " + String.valueOf(y));//initial test string
-				itemLabel.setLocation((int)(y/2), (int)(itemSpacing + (y/4)));
+				JLabel itemLabel =  new JLabel("");
+				itemLabel.setBounds((int)(1.2*itemSpacing), (int)(.2*itemSpacing + y),
+						(int)(getWidth() - 1.3*itemSpacing), (int)(.75*itemSpacing));
+				itemLabel.setFont(new Font("Dialog", Font.PLAIN, itemFontSize));
 				itemLabel.setVisible(true);
+				itemList.add(itemLabel);
 				add(itemLabel);
-				System.out.println(itemLabel.getText() + " " + y);
 			}
+			repaint();
+		}
+		
+		//(override) set bounds and fill itemLabels
+		public void setBounds(int x, int y, int w, int h){
+			super.setBounds(x,y,w,h);
+			fillItems();
 		}
 		
 		

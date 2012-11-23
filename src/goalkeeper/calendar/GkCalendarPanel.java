@@ -159,6 +159,8 @@ public class GkCalendarPanel extends JPanel{
 		}
 	}
 	
+	
+	public void ping(){makeEvent();}//public method to generate calendarPanel event
 	public void addActionListener(ActionListener listener){listeners.add(listener);}
 	public void removeActionListener(ActionListener listener){listeners.remove(listener);}
 	//send an actionEvent with "yyyyMMdd" as the command string
