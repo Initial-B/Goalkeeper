@@ -73,15 +73,33 @@ public class GkGUI extends JFrame{
 		public void paintComponent(Graphics g){
 			super.paintComponent(g);
 			g.drawRect(0, 0, getWidth()-1, getHeight()-1);
-			Stroke dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{5}, 0);
+			Stroke dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0);
 			Graphics2D g2d = (Graphics2D)g;
 			g2d.setStroke(dashedStroke);
-			for(double y = itemSpacing; y < getHeight();y+=itemSpacing){
+			//place regular JLabels from itemList separated by horizontal lines
+			for(double y = 0; y < getHeight();y+=itemSpacing){
 				Line2D line = new Line2D.Double(0, y, getWidth(), y);
 				g2d.draw(line);
 			}
-		
+			dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{9}, 0);
+			g2d.setStroke(dashedStroke);
+			Line2D line = new Line2D.Double(itemSpacing, 0, itemSpacing, getHeight());
+			g2d.draw(line);
+			
 		}
+		public void fillTasks(){
+			
+			System.out.println("setting size of taskPanel");
+			for(double y = 0; y < getHeight();y+=itemSpacing){
+				JLabel itemLabel =  new JLabel("test " + String.valueOf(y));//initial test string
+				itemLabel.setLocation((int)(y/2), (int)(itemSpacing + (y/4)));
+				itemLabel.setVisible(true);
+				add(itemLabel);
+				System.out.println(itemLabel.getText() + " " + y);
+			}
+		}
+		
+		
 		
 	}
 	
