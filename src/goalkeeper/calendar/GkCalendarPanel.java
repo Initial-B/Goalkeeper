@@ -111,7 +111,10 @@ public class GkCalendarPanel extends JPanel{
 		//set calendar to first day of selected month
 		calendar.set(year, month-1, 1);
 		int weekday = calendar.get(Calendar.DAY_OF_WEEK);
-		calendar.add(Calendar.DATE, -1*(weekday - 1));//set calendar to first day of selected week
+		if(weekday==1)//if the first day of the selected month is Sunday, start numbering from previous week
+			calendar.add(Calendar.DATE,-7);
+		else	//otherwise, start numbering first day of selected week
+			calendar.add(Calendar.DATE, -1*(weekday - 1));
 		//iterate through all NumPanels
 		for(int y = 0;y < 6;y++){
 			for(int x = 0;x < 7; x++){
@@ -159,7 +162,7 @@ public class GkCalendarPanel extends JPanel{
 		}
 	}
 	
-	
+//EventListener stuff **************************************************************************
 	public void ping(){makeEvent();}//public method to generate calendarPanel event
 	public void addActionListener(ActionListener listener){listeners.add(listener);}
 	public void removeActionListener(ActionListener listener){listeners.remove(listener);}
@@ -171,15 +174,10 @@ public class GkCalendarPanel extends JPanel{
 			listener.actionPerformed(event);
 	}
 	
-	//send an actionEvent with "yyyy-MM-dd" as the command string
-	/*
-	private void makeEvent(){
-		String formattedCommand = String.valueOf(year) + "-" + String.format("%02d", month) + "-" + String.valueOf(date);
-		ActionEvent event = new ActionEvent(this, ActionEvent.ACTION_PERFORMED, formattedCommand);
-		for(ActionListener listener : listeners)
-			listener.actionPerformed(event);
-	}
-	*/
+	
+	
+//end of EventListener stuff **********************************************************************
+	
 	
 //(Inner Class) subclass of JPanel for date items on GkCalendar	**************************************************
 	private class NumPanel extends JPanel implements MouseListener{

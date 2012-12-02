@@ -1,3 +1,5 @@
+import java.awt.Color;
+
 
 public class GkDriver {
 	
@@ -5,11 +7,21 @@ public class GkDriver {
 		GkGUI app1 = new GkGUI();
 		
 		Planner planner = new Planner();
-		int testYMD = 20121123;
-		planner.addTask(testYMD, "Test TaskPanel update on calendar events");
-		planner.addTask(testYMD, "Do victory dance");
 		app1.setPlanner(planner);
 		
+//********test code************************************************************
+		int testYMD = 20121123;
+		planner.addNewTask(testYMD, "Test TaskPanel update on calendar events");
+		planner.addNewTask(testYMD, "Do victory dance");
+		
+		app1.addNewGoal("Chores", Color.cyan);
+		app1.addNewGoal("Learn Chinese", Color.red);
+		System.out.println("Goal: " + planner.getGoal(0).getName() + " added on " + planner.getGoal(0).getStartDate());
+		planner.addNewTask(testYMD+1, "Clean up after victory party", planner.getGoal(0));
+		planner.addNewTask(testYMD+1, "Nurse hangover", planner.getGoal(0));
+		
+		
+//********end of test code************************************************************
 		
 		app1.execute();
 	}

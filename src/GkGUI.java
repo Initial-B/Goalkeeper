@@ -10,7 +10,11 @@ import java.util.ArrayList;
 
 import javax.swing.*;
 
+
+import taskpanel.TaskPanel;
+
 import goalkeeper.calendar.GkCalendarPanel;
+import goalpanel.GoalPanel;
 
 
 public class GkGUI extends JFrame{
@@ -18,6 +22,8 @@ public class GkGUI extends JFrame{
 	private JLabel[]taskLabels;
 	private Planner planner;
 	private GkCalendarPanel calendarPanel;
+	private GoalPanel goalPanel;
+	private int guiDate;//yyyymmdd of currently displayed planner date
 	
 	public void setPlanner(Planner p){
 		planner = p;
@@ -38,15 +44,23 @@ public class GkGUI extends JFrame{
         calendarPanel = new GkCalendarPanel();
         calendarPanel.setLocation(310,5);
 		add(calendarPanel);
-		DateListener listener = new DateListener();
-		calendarPanel.addActionListener(listener);
+		CalendarListener calendarListener = new CalendarListener();
+		calendarPanel.addActionListener(calendarListener);
 		
 		//configure taskPanel (daily to-do list display area)
 		taskPanel = new TaskPanel();
-		taskPanel.setBounds(5, 100, 300, 456);
+		taskPanel.setBounds(5, 100, 300, 455);
 		add(taskPanel);
+		TaskListener taskListener = new TaskListener();
+		taskPanel.addActionListener(taskListener);
 		
+		//configure goalPanel (currently active goals display area)
+		goalPanel = new GoalPanel();
+		goalPanel.setBounds(525, 5, 255, 550);
+		goalPanel.setVisible(true);
+		add(goalPanel);
 		
+		calendarPanel.ping();//get initially selected date to display (from calendarPanel)
 	}
 	
 	public void execute(){
@@ -54,76 +68,42 @@ public class GkGUI extends JFrame{
 		for(Component c : getComponents())
 			c.setVisible(true);
 	}
-
-	//actionlistener to read date from calendarpanel
-	public class DateListener implements ActionListener{
+	//add a goal to the current planner
+	public void addNewGoal(String n, Color c){
+		planner.addNewGoal(n, c);
+		goalPanel.addItem(n, c);
+	}
+	//actionlistener to respond to date selection event from calendarpanel
+	public class CalendarListener implements ActionListener{
 		public void actionPerformed(ActionEvent e) {
-			int ymdInt = Integer.valueOf(e.getActionCommand());
-			System.out.println("The date is: " + ymdInt);
-			for(int x = 0;x < taskPanel.itemList.size();x++){
+			guiDate = Integer.valueOf(e.getActionCommand());
+			System.out.println("The date is: " + guiDate);
+			for(int x = 0;x < taskPanel.getListSize();x++){
 				try{//if task exists for item slot in taskPanel, update item label
-					taskPanel.itemList.get(x).setText(planner.getTasks(ymdInt).get(x).getName());
-				}catch(IndexOutOfBoundsException exception){//if task DNE, set label's text blank
-					taskPanel.itemList.get(x).setText("");
-				}
-			taskPanel.itemList.get(x).repaint();
+					taskPanel.setText(x, planner.getTask(guiDate,x).getName());
+					taskPanel.setColor(x, planner.getTask(guiDate,x).getGoal().getColor());
+					if(planner.getTask(guiDate,x).isCompleted())
+						taskPanel.setChecked(x, true);
+					else
+						taskPanel.setChecked(x, false);
+					taskPanel.setItemVisibility(x, true);
+				}catch(IndexOutOfBoundsException e1){//if task DNE, hide item & its checkbox
+					taskPanel.setItemVisibility(x, false);
+				}catch(NullPointerException e2){}//if try block refers to attributes of nonexistant tasks, do nothing
 			}
 		}
 	}
-	//(component) JPanel with white bg, regular JLabels separated by dotted lines,
-	//				and a left side column for checkboxes
-	private class TaskPanel extends JPanel{
-		final static private int itemSpacing = 38; //default pixel spacing for items 
-		final static private int itemFontSize = 12;//default itemLabel font size
-		private ArrayList<JLabel> itemList;
-		
-		public TaskPanel(){
-			itemList = new ArrayList<JLabel>();
-			setBackground(Color.white);
-			setLayout(null);
+	//actionlistener to respond to checkbox selection event from TaskPanel
+	public class TaskListener implements ActionListener{
+		public void actionPerformed(ActionEvent e){
+			String command = e.getActionCommand();
+			//extract <index> and <checked> values from actionevent
+			int taskIndex = Integer.valueOf(command.substring(0, command.indexOf(" ")));
+			boolean checked = Boolean.valueOf(command.substring(command.indexOf(" ") + 1));
+			//update task in planner: checked = completed, unchecked = not completed
+			planner.getTasks(guiDate).get(taskIndex).setCompleted(checked);
 		}
-		
-		//(override) paint inner area of numPanel based on value of isSelected
-		public void paintComponent(Graphics g){
-			super.paintComponent(g);
-			g.drawRect(0, 0, getWidth()-1, getHeight()-1);
-			Stroke dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{4}, 0);
-			Graphics2D g2d = (Graphics2D)g;
-			g2d.setStroke(dashedStroke);
-			//place regular JLabels from itemList separated by horizontal lines
-			for(double y = 0; y < getHeight();y+=itemSpacing){
-				Line2D line = new Line2D.Double(0, y, getWidth(), y);
-				g2d.draw(line);
-			}
-			dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{9}, 0);
-			g2d.setStroke(dashedStroke);
-			Line2D line = new Line2D.Double(itemSpacing, 0, itemSpacing, getHeight());
-			g2d.draw(line);
-			
-		}
-		//instantiate JLabels in itemList based on component size
-		public void fillItems(){
-			itemList.clear();
-			for(double y = 0; y < getHeight();y+=itemSpacing){
-				JLabel itemLabel =  new JLabel("");
-				itemLabel.setBounds((int)(1.2*itemSpacing), (int)(.2*itemSpacing + y),
-						(int)(getWidth() - 1.3*itemSpacing), (int)(.75*itemSpacing));
-				itemLabel.setFont(new Font("Dialog", Font.PLAIN, itemFontSize));
-				itemLabel.setVisible(true);
-				itemList.add(itemLabel);
-				add(itemLabel);
-			}
-			repaint();
-		}
-		
-		//(override) set bounds and fill itemLabels
-		public void setBounds(int x, int y, int w, int h){
-			super.setBounds(x,y,w,h);
-			fillItems();
-		}
-		
-		
-		
 	}
-	
+
+		
 }
