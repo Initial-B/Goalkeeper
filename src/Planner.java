@@ -5,17 +5,29 @@ public class Planner {
 	
 	final static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");//default dateFormat for calendar dates
 	
-	private String owner;
+	private String name;
 	private String filepath;
 	private TreeMap<Integer, Day> schedule;
-	private ArrayList<Goal> goals;//list of current & past goals
+	private ArrayList<Goal> goals;
+	private ArrayList<Goal> pastGoals;
 	private Calendar calendar;//calendar for setting Goal start/end dates
 	
-	
+	//default constructor
 	public Planner(){
 		schedule = new TreeMap<Integer, Day>();
 		goals = new ArrayList<Goal>();
+		pastGoals = new ArrayList<Goal>();
 	}
+	//constructor with specified name
+	public Planner(String n){
+		this();
+		name = n;
+	}
+	
+	//conventional access methods
+	public String getName(){return name;}
+	public Goal getGoal(int index){return goals.get(index);}
+	public ArrayList<Goal> getGoals(){return goals;}
 	
 	//return Day with associated date, create if DNE
 	public Day getDay(int ymd){
@@ -27,14 +39,45 @@ public class Planner {
 			return retDay;
 		}
 	}
+	
+	//returns an arraylist of tasks of the specified date
+	public ArrayList<Task> getTasks(int ymd){
+		return getDay(ymd).tasks;
+	}
+	
+	public String[] getGoalNames(){
+		String[] goalNames = new String[goals.size()];
+		for(int x = 0;x < goalNames.length;x++)
+			goalNames[x] = goals.get(x).getName();
+		return goalNames;
+	}
+	public Color[] getGoalColors(){
+		Color[] goalColors = new Color[goals.size()];
+		for(int x = 0;x < goalColors.length;x++)
+			goalColors[x] = goals.get(x).getColor();
+		return goalColors;		
+	}
+	
+	
+	//return task at specified index of specified date
+	public Task getTask(int ymd, int index){
+		return getDay(ymd).tasks.get(index);
+	}
+	
 	//create and add a task with no related goal
-	public void addNewTask(int ymd, String n){getDay(ymd).addTask(new Task(n));}
+	public void addNewTask(int ymd, String n){
+		getDay(ymd).addTask(new Task(n));
+	}
 	
 	//create and add a task with a related goal
-	public void addNewTask(int ymd, String n, Goal g){getDay(ymd).addTask(new Task(n, g));}
+	public void addNewTask(int ymd, String n, Goal g){
+		getDay(ymd).addTask(new Task(n, g));
+	}
 	
 	//create and add an active goal with specified color
-	public void addNewGoal(String n, Color c){addGoal(new Goal(n, c));}
+	public void addNewGoal(String n, Color c){
+		addGoal(new Goal(n, c));
+	}
 	
 	//add an active goal to goals
 	public void addGoal(Goal g){
@@ -48,16 +91,12 @@ public class Planner {
 		calendar = Calendar.getInstance();
 		g.dateAdded = calendar.getTime();
 		g.active = false;
+		pastGoals.add(g);
+		goals.remove(g);
 	}
 	
-	//returns an arraylist of tasks of the specified date
-	public ArrayList<Task> getTasks(int ymd){return getDay(ymd).tasks;}
-	
-	//return task at specified index of specified date
-	public Task getTask(int ymd, int index){return getDay(ymd).tasks.get(index);}
-	
-	//conventional access methods
-	public Goal getGoal(int index){return goals.get(index);}
+
+
 	
 	
 //(inner class) Day item

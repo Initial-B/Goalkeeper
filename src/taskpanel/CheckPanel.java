@@ -38,6 +38,7 @@ public class CheckPanel extends JPanel implements MouseListener{
 	}
 	
 	//conventional access methods
+	public Color getColor(){return color;}
 	public void setCheckable(boolean b){checkable = b;}
 	public boolean isCheckable(){return checkable;}
 	public boolean isChecked(){return checked;}

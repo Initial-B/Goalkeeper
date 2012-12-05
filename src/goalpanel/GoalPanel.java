@@ -3,6 +3,9 @@ package goalpanel;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 import javax.swing.JLabel;
@@ -36,6 +39,10 @@ public class GoalPanel extends JPanel{
 		titleLabel.setVisible(true);
 		add(titleLabel);
 	}
+	
+	
+	public CheckPanel getGoalBox(int index){return goalBoxes.get(index);}
+	public int getItemSpacing(){return itemSpacing;}
 	
 //(override) paint component + display items in goalLabels/goalBoxes according to size of GoalPanel
 	public void paintComponent(Graphics g){

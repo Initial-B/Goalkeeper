@@ -15,7 +15,8 @@ import java.util.*;
 public class GkCalendarPanel extends JPanel{
 	final static String[] months = {"January","February","March","April","May","June",
 		"July","August","September","October","November","December"};
-	final static String[] days = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+	final static String[] days = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};//abbreviated day names
+	final static String[] fullDays = {"Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"};
 	final static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");//default dateFormat for calendar dates
 	
 	final static int defaultWidth = 210;
@@ -103,6 +104,14 @@ public class GkCalendarPanel extends JPanel{
 		updateCalendar();
 	}
 	
+//returns day of week + currently selected date	(e.g. "Sunday, December 2, 2012")
+	public String getDateString(){
+		calendar.set(year, month-1, date);
+		String dateString = fullDays[calendar.get(Calendar.DAY_OF_WEEK)-1];
+		dateString+=(", "+ months[month-1] + " " + date + ", " + year);
+		return dateString;
+	}
+	
 	//redraw all NumPanels based on selected year/month
 	private void updateCalendar(){
 		//change comboBox text to match selected year/month
@@ -122,8 +131,10 @@ public class GkCalendarPanel extends JPanel{
 				numPanels[y][x].setValues(calendar.get(Calendar.DATE), dateFormat.format(calendar.getTime()));
 				//deselect NumPanel
 				numPanels[y][x].isSelected = false;
+				//set days of current month to non-faded (black text)
 				if((calendar.get(Calendar.MONTH) + 1) == month){
 					numPanels[y][x].faded = false;
+					//set panel for current day to selected
 					if(date==numPanels[y][x].value && year==calendar.get(Calendar.YEAR)){
 						numPanels[y][x].isSelected = true;
 						lastSelectedNumPanel = numPanels[y][x];
