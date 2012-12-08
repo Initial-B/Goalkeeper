@@ -45,10 +45,10 @@ public class Planner {
 		return getDay(ymd).tasks;
 	}
 	
-	public String[] getGoalNames(){
-		String[] goalNames = new String[goals.size()];
-		for(int x = 0;x < goalNames.length;x++)
-			goalNames[x] = goals.get(x).getName();
+	public ArrayList<String> getGoalNames(){
+		ArrayList<String> goalNames = new ArrayList<String>();
+		for(Goal g : goals)
+			goalNames.add(g.getName());
 		return goalNames;
 	}
 	public Color[] getGoalColors(){
@@ -86,7 +86,7 @@ public class Planner {
 		goals.add(g);
 	}
 	
-	//deactivate goal
+	//deactivate goal (todo: remove goal/color from all related tasks)
 	public void removeGoal(Goal g){
 		calendar = Calendar.getInstance();
 		g.dateAdded = calendar.getTime();
@@ -94,7 +94,8 @@ public class Planner {
 		pastGoals.add(g);
 		goals.remove(g);
 	}
-	
+	//deactivate goal at specified index
+	public void removeGoal(int index){removeGoal(goals.get(index));}
 
 
 	
@@ -158,5 +159,14 @@ public class Planner {
 		public String getName(){return name;}
 		public String getStartDate(){return dateFormat.format(dateAdded);}
 		public String getEndDate(){return dateFormat.format(dateRemoved);}
+		
+		@Override //two goals are equal if their names are equal
+		public boolean equals(Object other){
+			if (other == null) return false;
+		    if (other == this) return true;
+		    if (!(other instanceof Goal))return false;
+			Goal otherGoal = (Goal)other;
+			return name.equals(otherGoal.getName());
+		}
 	}
 }

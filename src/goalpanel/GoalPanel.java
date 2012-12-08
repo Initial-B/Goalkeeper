@@ -52,8 +52,8 @@ public class GoalPanel extends JPanel{
 		for(int y = 0; y < goalLabels.size();y++){//for each item in goal list
 			JLabel goalLabel = goalLabels.get(y);
 			CheckPanel goalBox = goalBoxes.get(y);
-			goalLabel.setBounds((int)(itemSpacing * 1.05), itemSpacing*(y+1),
-					(int)(getWidth()-itemSpacing*1.1), (int)(itemSpacing*.95) );
+			goalLabel.setBounds((int)(itemSpacing * 1.2), itemSpacing*(y+1),
+					(int)(getWidth()-itemSpacing*1.25), (int)(itemSpacing*.95) );
 			goalBox.setBounds(1, itemSpacing*(y+1), itemSpacing-1, itemSpacing-1);
 		}
 		super.paintComponent(g);
