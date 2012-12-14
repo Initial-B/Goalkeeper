@@ -41,6 +41,7 @@ public class GoalPanel extends JPanel{
 	}
 	
 	
+	public ArrayList<JLabel> getItems(){return goalLabels;}
 	public CheckPanel getGoalBox(int index){return goalBoxes.get(index);}
 	public int getItemSpacing(){return itemSpacing;}
 	
@@ -81,6 +82,8 @@ public class GoalPanel extends JPanel{
 	}
 	//remove item at specified index
 	public void removeItem(int index){
+		remove(goalLabels.get(index));
+		remove(goalBoxes.get(index));
 		goalLabels.remove(index);
 		goalBoxes.remove(index);
 		repaint();

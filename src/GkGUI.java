@@ -3,14 +3,19 @@ import java.awt.event.*;
 import java.awt.geom.*;
 import java.awt.image.*;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.text.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import javax.swing.*;
+import javax.swing.filechooser.*;
 
 
 import taskpanel.*;
@@ -45,35 +50,40 @@ public class GkGUI extends JFrame{
 		/*light gray      */new Color(192,192,192),	
 		/*dark gray       */new Color(128,128,128),	
 	};
-	private final static String noGoalString = "(none)";
+	final static String noGoalString = "(none)";//default marker for tasks/colorpanels with no related goals (must be nonempty)
 	
+	private ArrayList<Color> availableColors;
 	private ArrayList<ImageIcon> goalIcons;
 	private ImageIcon colorChoiceIcon;
-	private ArrayList<ImageIcon> goalColorChoiceIcons, taskColorChoiceIcons;//used in changing item colors during edit mode
+	private ArrayList<ColorChoicePanel> goalColorChoicePanels, taskColorChoicePanels;//used in changing item colors during edit mode
 	private ArrayList<JTextField> taskNameFields, goalNameFields;//used in changing item names during edit mode
 	
 	private JMenuBar menuBar;
 	private JMenu fileMenu;
+	private JMenuItem saveMenuItem, saveAsMenuItem, openMenuItem, newMenuItem;
 	
 	private TaskPanel taskPanel;
 	private JLabel nameLabel;//displays planner name
 	private JLabel dateLabel;//displays currently selected date
 	private GkCalendarPanel calendarPanel;
 	private GoalPanel goalPanel;
+	private EditOverlay editOverlay;
 	
 	private JButton newTaskButton, newGoalButton, editTasksButton, editGoalsButton,
 		saveChangesButton, goalTrackingButton;
 	
 	private Planner planner;
 	private int guiDate;//yyyymmdd of currently displayed planner date
-	private ArrayList<Color> availableColors;
+	private String plannerFileName;
+	private boolean taskEditEnabled, goalEditEnabled;
 	
 	public GkGUI(){
 		//configure main GUI window
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		Container contentPane = getContentPane();
+		JLayeredPane contentPane = new JLayeredPane();
 		contentPane.setLayout(null);// enable explicit positioning of GUI components
         contentPane.setBackground( Color.lightGray);
+        setContentPane(contentPane);
         setTitle("Goalkeeper");
         setSize(new Dimension(800,610));
         setResizable(false);//lock window size
@@ -87,6 +97,44 @@ public class GkGUI extends JFrame{
         fileMenu = new JMenu("File");
 		fileMenu.setMnemonic(KeyEvent.VK_F);
 		menuBar.add(fileMenu);
+		
+		//configure loadMenuItem
+		openMenuItem = new JMenuItem("Open...");
+		openMenuItem.setMnemonic(KeyEvent.VK_O);
+		fileMenu.add(openMenuItem);
+		fileMenu.addSeparator();
+		openMenuItem.addActionListener(
+			new ActionListener(){ // anonymous inner class
+				public void actionPerformed(ActionEvent event){
+					loadPlanner();
+					setTitle("Goalkeeper - " + plannerFileName);
+				}
+		});
+		
+		//configure saveMenuItem
+		saveMenuItem = new JMenuItem("Save");
+		saveMenuItem.setMnemonic(KeyEvent.VK_S);
+		fileMenu.add(saveMenuItem);
+		fileMenu.addSeparator();
+		saveMenuItem.addActionListener(
+			new ActionListener(){ // anonymous inner class
+				public void actionPerformed(ActionEvent event){
+					savePlanner();
+				}
+		});
+		
+		//configure saveAsMenuItem
+		saveAsMenuItem = new JMenuItem("Save As...");
+		fileMenu.add(saveAsMenuItem);
+		fileMenu.addSeparator();
+		saveAsMenuItem.addActionListener(
+			new ActionListener(){ // anonymous inner class
+				public void actionPerformed(ActionEvent event){
+					savePlannerAs();
+					setTitle("Goalkeeper - " + plannerFileName);
+				}
+		});
+		
         
         //configure nameLabel
         nameLabel = new JLabel("");
@@ -115,6 +163,20 @@ public class GkGUI extends JFrame{
 		add(taskPanel);
 		TaskListener taskListener = new TaskListener();
 		taskPanel.addActionListener(taskListener);
+		taskNameFields = new ArrayList<JTextField>();//text fields used in edit mode
+		taskColorChoicePanels = new ArrayList<ColorChoicePanel>();//icons used in edit mode
+		for(int x = 0;x < taskPanel.getItems().size();x++){
+			//create text field for item in taskPanel
+			JTextField taskField = new JTextField();
+			taskField.setBounds(taskPanel.getItems().get(x).getBounds());//set bounds equal to task label's
+			taskField.setVisible(true);
+			taskNameFields.add(taskField);
+			//create color icon for item's checkbox
+			ColorChoicePanel colorPanel = new ColorChoicePanel();
+			colorPanel.setBounds(taskPanel.getCheckPanels().get(x).getBounds());
+			colorPanel.setVisible(true);
+			taskColorChoicePanels.add(colorPanel);
+		}
 		
 		//configure goalPanel (currently active goals display area)
 		goalPanel = new GoalPanel();
@@ -122,13 +184,16 @@ public class GkGUI extends JFrame{
 		goalPanel.setVisible(true);
 		add(goalPanel);
 		
+		
+		//instantiate misc. variables
 		goalIcons = new ArrayList<ImageIcon>();
 		availableColors = new ArrayList<Color>();
 		for(Color c : goalColors)//all colors initially available
 			availableColors.add(c);
 		ColorChoicePanel colorChoicePanel = new ColorChoicePanel();
 		colorChoiceIcon = createImageIcon(colorChoicePanel, 25, 25);
-		
+		taskEditEnabled = false;
+		goalEditEnabled = false;
 		calendarPanel.ping();//get initially selected date to display (from calendarPanel)
 		
 		//configure newTaskButton
@@ -156,61 +221,83 @@ public class GkGUI extends JFrame{
 					}
 					taskNameField.setText("");//clear text field
 				}
-			} // end anonymous inner class
-		); // end call to addActionListener
+		}); // end call to addActionListener
 		add(newTaskButton);
 		
 		//configure newGoalButton
 		newGoalButton = new JButton("New Goal");
 		newGoalButton.setBounds(416, 170, 104, 50);
 		newGoalButton.setVisible(true);
-		newGoalButton.addActionListener(
-			new ActionListener(){//(anonymous inner class) create newGoal MessageDialog
-				JTextField goalNameField = new JTextField();
-				JLabel goalNameFieldLabel = new JLabel("Goal Name");
-				JLabel colorBoxLabel = new JLabel("Select Color");
-				JComboBox colorBox;
-				public void actionPerformed(ActionEvent event) {
-					colorBox = createColorChoiceComboBox();
-					JComponent[] inputs = new JComponent[]{//assemble optionDialog prompting user for goal name/color
-						goalNameFieldLabel, goalNameField,
-						colorBoxLabel, colorBox};
-					String[] options = {"Add Goal", "Cancel"};
-					int response = JOptionPane.showOptionDialog(null, inputs, "Create new goal", JOptionPane.OK_CANCEL_OPTION, 
-							JOptionPane.PLAIN_MESSAGE, null, options, "Add Goal");
-					if(response==0){//if user clicked "Add Goal"
-						if(goalNameField.getText().equals("")||goalNameField.getText().equals(noGoalString))
-							JOptionPane.showMessageDialog(null,"Invalid goal name");
-						else if(planner.getGoalNames().contains(goalNameField.getText()))
-							JOptionPane.showMessageDialog(null,"Goal with chosen name already exists");
-						else
-							addNewGoal(goalNameField.getText(), availableColors.get(colorBox.getSelectedIndex()));
-					}
-					goalNameField.setText("");//clear text field
+		newGoalButton.addActionListener(new ActionListener(){//(anonymous inner class) create newGoal MessageDialog
+			JTextField goalNameField = new JTextField();
+			JLabel goalNameFieldLabel = new JLabel("Goal Name");
+			JLabel colorBoxLabel = new JLabel("Select Color");
+			JComboBox colorBox;
+			public void actionPerformed(ActionEvent event) {
+				colorBox = createColorChoiceComboBox();
+				JComponent[] inputs = new JComponent[]{//assemble optionDialog prompting user for goal name/color
+					goalNameFieldLabel, goalNameField,
+					colorBoxLabel, colorBox};
+				String[] options = {"Add Goal", "Cancel"};
+				int response = JOptionPane.showOptionDialog(null, inputs, "Create new goal", JOptionPane.OK_CANCEL_OPTION, 
+						JOptionPane.PLAIN_MESSAGE, null, options, "Add Goal");
+				if(response==0){//if user clicked "Add Goal"
+					if(goalNameField.getText().equals("")||goalNameField.getText().equals(noGoalString))
+						JOptionPane.showMessageDialog(null,"Invalid goal name");
+					else if(planner.getGoalNames().contains(goalNameField.getText()))
+						JOptionPane.showMessageDialog(null,"Goal with chosen name already exists");
+					else
+						addNewGoal(goalNameField.getText(), availableColors.get(colorBox.getSelectedIndex()));
 				}
-			} // end anonymous inner class
-		); // end call to addActionListener
+				goalNameField.setText("");//clear text field
+			}
+		}); // end call to addActionListener
 		add(newGoalButton);
 		
 		//configure editTasksButton
 		editTasksButton = new JButton("Edit Tasks");
 		editTasksButton.setBounds(310, 222, 210, 40);
 		editTasksButton.setVisible(true);
-		editTasksButton.addActionListener(
-				new ActionListener(){// anonymous inner class
-					public void actionPerformed(ActionEvent event) {
-						JComponent[] inputs = new JComponent[]{
-						new JLabel(colorChoiceIcon)};
-						JOptionPane.showMessageDialog(null, inputs, "Edit tasks", JOptionPane.PLAIN_MESSAGE);
-					}
-				} // end anonymous inner class
-			);
+		editTasksButton.addActionListener(new ActionListener(){// anonymous inner class
+			public void actionPerformed(ActionEvent event) {
+				if(goalEditEnabled){
+					editOverlay.finalizeEdits();
+					goalEditEnabled = false;
+					updateGoals();
+				}
+				if(!taskEditEnabled){
+					editOverlay.addNewTaskEditOverlay(taskPanel);
+					taskEditEnabled = true;
+				}else{
+					editOverlay.finalizeEdits();
+					taskEditEnabled = false;
+					calendarPanel.ping();
+				}
+			}
+		});
 		add(editTasksButton);
 		
 		//configure editGoalsButton
 		editGoalsButton = new JButton("Edit Goals");
 		editGoalsButton.setBounds(310, 264, 210, 40);
 		editGoalsButton.setVisible(true);
+		editGoalsButton.addActionListener(new ActionListener(){// anonymous inner class
+			public void actionPerformed(ActionEvent event) {
+				if(taskEditEnabled){
+					editOverlay.finalizeEdits();
+					taskEditEnabled = false;
+					calendarPanel.ping();
+				}
+				if(!goalEditEnabled){
+					editOverlay.addNewGoalEditOverlay(goalPanel);
+					goalEditEnabled = true;
+				}else{
+					editOverlay.finalizeEdits();
+					goalEditEnabled = false;
+					updateGoals();
+				}
+			}
+		});
 		add(editGoalsButton);
 		
 		//configure saveChangesButton
@@ -227,11 +314,23 @@ public class GkGUI extends JFrame{
 
 	}
 	
+	//launch frame components
 	public void execute(){
 		setVisible(true);
 		for(Component c : getComponents())
 			c.setVisible(true);
 	}
+	
+	//conventional access methods
+	public ArrayList<Color> getAvailableColors(){return availableColors;}
+	public void setAvailableColors(ArrayList<Color> colors){
+		availableColors.clear();
+		for(Color c : colors)
+			availableColors.add(c);
+	}
+	public String getNoGoalString(){return noGoalString;}
+	public int getGuiDate(){return guiDate;}
+	public Planner getPlanner(){return planner;}
 	
 	//add new task to planner
 	public void addNewTask(String taskName, String goalName){
@@ -242,22 +341,17 @@ public class GkGUI extends JFrame{
 		calendarPanel.ping();//update displayed tasks for currently selected calendar date
 	}
 	
-	
 	//add new goal to planner
 	public void addNewGoal(String n, Color c){
 		planner.addNewGoal(n, c);
-		goalPanel.addItem(n, c);
-		availableColors.remove(c);//prevent future goals from using same color
-		goalIcons.add(createColorIcon(20, 20, c));
+		updateGoals();
 		goalPanel.repaint();//update displayed goals
 	}
 	
 	//remove goal at specified index (from planner, goalIcons, & goalBox)
 	public void removeGoal(int index){
-		availableColors.add(planner.getGoal(index).getColor());//goal color can now be used again
-		goalIcons.remove(index);
-		goalPanel.removeItem(index);
 		planner.removeGoal(index);
+		updateGoals();
 	}
 	
 	
@@ -266,6 +360,22 @@ public class GkGUI extends JFrame{
 		planner = p;
 		calendarPanel.ping();
 		nameLabel.setText(planner.getName());
+		setTitle(plannerFileName);
+		editOverlay = new EditOverlay(this);
+		updateGoals();
+	}
+	
+	//update goalPanel/availableColors to reflect goals in planner
+	public void updateGoals(){
+		for(int x = goalPanel.getItems().size()-1; x >= 0;x--)//remove all items from goalPanel
+			goalPanel.removeItem(x);
+		availableColors = new ArrayList<Color>(Arrays.asList(goalColors));
+		goalIcons.clear();
+		for(Planner.Goal goal : planner.getGoals()){
+			goalPanel.addItem(goal.getName(), goal.getColor());//add to goalPanel all goals in planner
+			availableColors.remove(goal.getColor());//and make its color unavailable
+			goalIcons.add(createColorIcon(20,20,goal.getColor()));//add icon of goal color to goalIcons 
+		}
 	}
 	
 	//update dateLabel
@@ -277,7 +387,7 @@ public class GkGUI extends JFrame{
 		public void actionPerformed(ActionEvent e) {
 			updateDate();
 			guiDate = Integer.valueOf(e.getActionCommand());
-			for(int x = 0;x < taskPanel.getListSize();x++){
+			for(int x = 0;x < taskPanel.getItems().size();x++){
 				try{//if task exists for item slot in taskPanel, update item label
 					taskPanel.setText(x, planner.getTask(guiDate,x).getName());
 					taskPanel.setColor(x, planner.getTask(guiDate,x).getGoal().getColor());
@@ -304,18 +414,13 @@ public class GkGUI extends JFrame{
 		}
 	}
 	
-	//turns on/off edit mode for tasks/goals (specified by "mode" string)
-	private void setEditMode(String mode, boolean enabled){
-		//todo: case statement for tasks/goals edit mode enabled/disabled
-		
-	}
-	
 	//returns an ImageIcon of the specified width, height, and color
 	private ImageIcon createColorIcon(int width, int height, Color color){
 		JPanel colorSquare = new JPanel();
 		colorSquare.setBackground(color);
 		return createImageIcon(colorSquare, width, height);
 	}
+	
 	//returns an ImageIcon generated from specified JPanel
 	private ImageIcon createImageIcon(JPanel panel, int width, int height){
 		panel.setBounds(0, 0, width, height);
@@ -331,21 +436,27 @@ public class GkGUI extends JFrame{
 	
 	//returns a JComboBox featuring the available colors
 	private JComboBox createColorChoiceComboBox(){
-		ImageIcon[]availableColorIcons = new ImageIcon[availableColors.size()];
-		for(int x = 0;x < availableColorIcons.length;x++)
-			availableColorIcons[x] = createColorIcon(200, 20, availableColors.get(x));
-		JComboBox colorBox = new JComboBox(availableColorIcons);
+		return createColorChoiceComboBox(availableColors);
+	}
+	//returns a JComboBox featuring the specified colors
+	JComboBox createColorChoiceComboBox(ArrayList<Color> colors){
+		ImageIcon[]colorIcons = new ImageIcon[colors.size()];
+		for(int x = 0;x < colorIcons.length;x++)
+			colorIcons[x] = createColorIcon(200, 20, colors.get(x));
+		JComboBox colorBox = new JComboBox(colorIcons);
 		return colorBox;
 	}
 	
 	//returns a JComboBox featuring the current goals
-	private JComboBox createGoalComboBox(){
+	JComboBox createGoalComboBox(){
 		ArrayList<String> items = planner.getGoalNames();
 		items.add(0,noGoalString);//add no goal option to front of item list
 		JComboBox goalBox = new JComboBox(items.toArray());
 		goalBox.setRenderer(new GoalComboBoxRenderer());
 		return goalBox;
 	}
+	
+	
 	//(inner class)custom comboBox cellRenderer for goal/color selection
 	//	displays combo box items as JLabels formed from goal ImageIcons + goal names
 	private class GoalComboBoxRenderer extends JLabel implements ListCellRenderer{	
@@ -368,49 +479,45 @@ public class GkGUI extends JFrame{
 		}	
 	}
 	
-	//(inner class, component) rainbow color-choice panel (used in goal/task edit mode)
-	private class ColorChoicePanel extends JPanel implements MouseListener{
-		JLabel textLabel;
-		int width, height;
-		public ColorChoicePanel(){
-			super();
-			textLabel = new JLabel("?",SwingConstants.CENTER);//set label text + horizontal alignment
-			textLabel.setVerticalAlignment(SwingConstants.CENTER);
-			textLabel.setFont(textLabel.getFont().deriveFont((float)26));//set fontsize to 26
-			textLabel.setForeground(Color.BLACK);
-			add(textLabel);
-			setVisible(true);
-		}
-		public void paintComponent(Graphics g){
-			super.paintComponent(g);
-			width = getWidth();
-			height = getHeight();
-			textLabel.setBounds(-width, -height, width*3, height*3);
-			textLabel.setVisible(true);
-			g.setColor(Color.RED);
-			g.fillPolygon(new int[]{0, width/2, width/2}, new int[]{0, 0, height/2}, 3);
-			g.setColor(Color.ORANGE);
-			g.fillPolygon(new int[]{width/2, width, width/2}, new int[]{0, 0, height/2}, 3);
-			g.setColor(Color.YELLOW);
-			g.fillPolygon(new int[]{width/2, width, width}, new int[]{height/2, 0, height/2}, 3);
-			g.setColor(Color.GREEN);
-			g.fillPolygon(new int[]{width/2, width, width}, new int[]{height/2, height/2, height}, 3);
-			g.setColor(new Color(  0,128,128));//"teal"
-			g.fillPolygon(new int[]{width/2, width, width/2}, new int[]{height/2, height, height}, 3);
-			g.setColor(new Color(30,144,255));//"dodger blue"
-			g.fillPolygon(new int[]{0, width/2, width/2}, new int[]{height, height/2, height}, 3);
-			g.setColor(new Color(128,  0,128));//"purple"
-			g.fillPolygon(new int[]{0, 0, width/2}, new int[]{height, height/2, height/2}, 3);
-			g.setColor(new Color(255,105,180));//"hot pink"
-			g.fillPolygon(new int[]{0, width/2, 0}, new int[]{0, height/2, height/2}, 3);
+	public void savePlanner(){
+		try {
+			FileOutputStream saveFile = new FileOutputStream("Goalkeeper - " + planner.getName() + ".sav");
+			ObjectOutputStream save = new ObjectOutputStream(saveFile);
+			save.writeObject(planner);
+			save.close();
+		} catch (Exception e) {e.printStackTrace();}
+	}
+	
+	public void savePlannerAs(){
+		JFileChooser chooser = new JFileChooser();
+		chooser.setFileFilter(new FileNameExtensionFilter("Goalkeeper save file (.sav)", "sav"));
+		int returnVal = chooser.showSaveDialog(this);
+		if(returnVal == JFileChooser.APPROVE_OPTION){
+			try{//TODO: save to specified directory
+				FileOutputStream saveFile = new FileOutputStream(chooser.getSelectedFile());
+				ObjectOutputStream save = new ObjectOutputStream(saveFile);
+				plannerFileName = chooser.getName(chooser.getSelectedFile());
+				save.writeObject(planner);
+				save.close();
+			}catch(Exception e){e.printStackTrace();}
 		}
 		
-		//(implemented) MouseEvents (listener added in constructor)
-		//todo: toggleable mouselistener for task/goal edit
-		public void mouseClicked(MouseEvent e) {}
-		public void mouseEntered(MouseEvent e) {}
-		public void mouseExited(MouseEvent e) {}
-		public void mousePressed(MouseEvent e) {}
-		public void mouseReleased(MouseEvent e) {}
+	}
+	
+	public void loadPlanner(){
+		JFileChooser chooser = new JFileChooser();
+		chooser.setFileFilter(new FileNameExtensionFilter("Goalkeeper save file (.sav)", "sav"));
+		int returnVal = chooser.showOpenDialog(this);
+	    if(returnVal == JFileChooser.APPROVE_OPTION){
+	    	try{
+	    		FileInputStream saveFile = new FileInputStream(chooser.getSelectedFile());
+	    		ObjectInputStream save = new ObjectInputStream(saveFile);
+	    		Planner loadedPlanner = (Planner)save.readObject();
+	    		plannerFileName = chooser.getName(chooser.getSelectedFile());
+	    		setPlanner(loadedPlanner);
+	    		save.close();
+	    	}
+	    	catch (Exception e) {e.printStackTrace();}
+	    }
 	}
 }

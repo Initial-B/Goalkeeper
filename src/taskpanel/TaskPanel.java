@@ -34,6 +34,11 @@ public class TaskPanel extends JPanel{
 		checkPanels = new ArrayList<CheckPanel>();
 	}
 	
+	public int getItemSpacing(){return itemSpacing;}
+	public ArrayList<JLabel> getItems(){return itemList;}
+	public ArrayList<CheckPanel> getCheckPanels(){return checkPanels;}
+	public JLabel getItem(int index){return itemList.get(index);}
+	
 	//set text of JLabel at specified index to the given string
 	public void setText(int index, String s){
 		itemList.get(index).setText(s);
@@ -62,7 +67,7 @@ public class TaskPanel extends JPanel{
 		checkPanels.get(index).setVisible(visible);
 	}
 	
-	public int getListSize(){return itemList.size();}
+	
 	
 	//(override) paint inner area of numPanel based on value of isSelected
 	public void paintComponent(Graphics g){

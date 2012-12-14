@@ -1,12 +1,12 @@
 import java.awt.*;
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.*;
-public class Planner {
+public class Planner implements Serializable{
 	
 	final static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");//default dateFormat for calendar dates
 	
 	private String name;
-	private String filepath;
 	private TreeMap<Integer, Day> schedule;
 	private ArrayList<Goal> goals;
 	private ArrayList<Goal> pastGoals;
@@ -29,7 +29,8 @@ public class Planner {
 	public Goal getGoal(int index){return goals.get(index);}
 	public ArrayList<Goal> getGoals(){return goals;}
 	
-	//return Day with associated date, create if DNE
+	
+	//return Day with associated date, create one if DNE
 	public Day getDay(int ymd){
 		if(schedule.containsKey(ymd))
 			return schedule.get(ymd);
@@ -40,10 +41,7 @@ public class Planner {
 		}
 	}
 	
-	//returns an arraylist of tasks of the specified date
-	public ArrayList<Task> getTasks(int ymd){
-		return getDay(ymd).tasks;
-	}
+
 	
 	public ArrayList<String> getGoalNames(){
 		ArrayList<String> goalNames = new ArrayList<String>();
@@ -51,33 +49,26 @@ public class Planner {
 			goalNames.add(g.getName());
 		return goalNames;
 	}
-	public Color[] getGoalColors(){
-		Color[] goalColors = new Color[goals.size()];
-		for(int x = 0;x < goalColors.length;x++)
-			goalColors[x] = goals.get(x).getColor();
+	public ArrayList<Color> getGoalColors(){
+		ArrayList<Color> goalColors = new ArrayList<Color>();
+		for(Goal g : goals)
+			goalColors.add(g.getColor());
 		return goalColors;		
 	}
 	
 	
-	//return task at specified index of specified date
-	public Task getTask(int ymd, int index){
-		return getDay(ymd).tasks.get(index);
-	}
+	public ArrayList<Task> getTasks(int ymd){return getDay(ymd).tasks;}//returns an arraylist of tasks of the specified date
+	public Task getTask(int ymd, int index){return getDay(ymd).tasks.get(index);}//return task at specified index of specified date
+	public void removeTask(int ymd, int index){getDay(ymd).tasks.remove(index);}
 	
 	//create and add a task with no related goal
-	public void addNewTask(int ymd, String n){
-		getDay(ymd).addTask(new Task(n));
-	}
+	public void addNewTask(int ymd, String n){getDay(ymd).addTask(new Task(n));}
 	
 	//create and add a task with a related goal
-	public void addNewTask(int ymd, String n, Goal g){
-		getDay(ymd).addTask(new Task(n, g));
-	}
+	public void addNewTask(int ymd, String n, Goal g){getDay(ymd).addTask(new Task(n, g));}
 	
 	//create and add an active goal with specified color
-	public void addNewGoal(String n, Color c){
-		addGoal(new Goal(n, c));
-	}
+	public void addNewGoal(String n, Color c){addGoal(new Goal(n, c));}
 	
 	//add an active goal to goals
 	public void addGoal(Goal g){
@@ -86,7 +77,7 @@ public class Planner {
 		goals.add(g);
 	}
 	
-	//deactivate goal (todo: remove goal/color from all related tasks)
+	//remove a goal (todo: remove goal/color from all related tasks)
 	public void removeGoal(Goal g){
 		calendar = Calendar.getInstance();
 		g.dateAdded = calendar.getTime();
@@ -94,14 +85,15 @@ public class Planner {
 		pastGoals.add(g);
 		goals.remove(g);
 	}
-	//deactivate goal at specified index
+	//remove goal at specified index
 	public void removeGoal(int index){removeGoal(goals.get(index));}
+	
 
 
 	
 	
 //(inner class) Day item
-	public class Day{
+	public class Day implements Serializable{
 		private int hashDate;//date as int YYYYMMDD 
 		private ArrayList<Task> tasks;
 		
@@ -114,7 +106,7 @@ public class Planner {
 	}
 
 //(inner class) Task item	
-	public class Task{
+	public class Task implements Serializable{
 		private String name;
 		private Goal relatedGoal;
 		private boolean completed;
@@ -132,12 +124,14 @@ public class Planner {
 		public void setCompleted(boolean b){completed = b;}
 		public boolean isCompleted(){return completed;}
 		public void setGoal(Goal g){relatedGoal = g;}
+		public void removeGoal(){relatedGoal = new Goal();}
 		public Goal getGoal(){return relatedGoal;}
+		public void setName(String n){name = n;}
 		public String getName(){return name;}
 	}
 	
 //(inner class) Goal item
-	public class Goal{
+	public class Goal implements Serializable{
 		private Color color;
 		private String name;
 		private Date dateAdded;
@@ -156,6 +150,7 @@ public class Planner {
 		//access methods
 		public void setColor(Color c){color = c;}
 		public Color getColor(){return color;}
+		public void setName(String n){name = n;}
 		public String getName(){return name;}
 		public String getStartDate(){return dateFormat.format(dateAdded);}
 		public String getEndDate(){return dateFormat.format(dateRemoved);}
