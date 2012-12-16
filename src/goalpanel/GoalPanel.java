@@ -1,3 +1,6 @@
+//Brady Whytock
+//ITP 220 - final project
+
 package goalpanel;
 
 import java.awt.Color;

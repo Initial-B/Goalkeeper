@@ -1,3 +1,6 @@
+//Brady Whytock
+//ITP 220 - final project
+
 import java.awt.Color;
 import java.awt.Graphics;
 
@@ -17,6 +20,7 @@ import javax.swing.SwingConstants;
 			super();
 			setLayout(null);
 			setOpaque(true);
+			setToolTipText("click to choose color");
 			newGoalPicked = false;
 			String goalName = GkGUI.noGoalString;
 			color = Color.WHITE;

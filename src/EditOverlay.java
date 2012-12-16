@@ -1,3 +1,6 @@
+//Brady Whytock
+//ITP 220 - final project
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
@@ -230,26 +233,27 @@ public class EditOverlay{
 	
 	//dialog for confirming task edits
 	public boolean confirmEdits(TaskEditOverlay tEO){
-		boolean editsMade = false;
+		int numChanges = 0;
 		//iterate through editor components, checking if any changes made
 		for(int x = 0; x < tEO.taskColorPanels.size();x++){
 			ColorChoicePanel colorPanel = tEO.taskColorPanels.get(x);
 			if((colorPanel.newGoalPicked 
-			 && !colorPanel.color.equals(planner.getTask(goalkeeper.getGuiDate(),x).getGoal().getColor()))
-			 || !tEO.taskNameFields.get(x).getText().equals(planner.getTask(goalkeeper.getGuiDate(),x).getName()))
-			 	editsMade = true;
+			 && !colorPanel.color.equals(planner.getTask(goalkeeper.getGuiDate(),x).getGoal().getColor())))
+			 	numChanges++;
+			if(!tEO.taskNameFields.get(x).getText().equals(planner.getTask(goalkeeper.getGuiDate(),x).getName()))
+				numChanges++;
 		}
-		if(!editsMade)
+		if(numChanges==0)
 			return true;
 		else{
 			String deletedTasks = "";
 			for(int x = 0;x < tEO.taskNameFields.size();x++){
 				if(tEO.taskNameFields.get(x).getText().equals(""))
-					deletedTasks += ("\t\t-" + planner.getTask(goalkeeper.getGuiDate(), x).getName() + "\n");
+					deletedTasks += ("        -" + planner.getTask(goalkeeper.getGuiDate(), x).getName() + "\n");
 			}
 			if(!deletedTasks.equals(""))//if any tasks have been deleted
-				deletedTasks = "\n\tThe following task(s) will be deleted:\n" + deletedTasks;
-			int response = JOptionPane.showOptionDialog(null, "Apply changes to tasks?" + deletedTasks,
+				deletedTasks = "\n    The following task(s) will be deleted:\n" + deletedTasks;
+			int response = JOptionPane.showOptionDialog(null, numChanges + " change(s) made to tasks" + deletedTasks,
 				"Task Edit Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null,
 				new String[]{"Apply changes", "Discard changes"}, "Apply changes");
 			return (response==0);
@@ -258,26 +262,27 @@ public class EditOverlay{
 	
 	//dialog for confirming goal edits
 	public boolean confirmEdits(GoalEditOverlay gEO){
-		boolean editsMade = false;
+		int numChanges = 0;
 		//iterate through editor components, checking if any changes made
 		for(int x = 0; x < gEO.goalColorPanels.size();x++){
 			ColorChoicePanel colorPanel = gEO.goalColorPanels.get(x);
-			if((colorPanel.newGoalPicked
-			 && !colorPanel.color.equals(planner.getGoalColors().get(x))
-			 || !gEO.goalNameFields.get(x).getText().equals(planner.getGoalNames().get(x))))
-				editsMade = true;
+			if(colorPanel.newGoalPicked
+			 && !colorPanel.color.equals(planner.getGoalColors().get(x)))
+			 	numChanges++;
+			 if(!gEO.goalNameFields.get(x).getText().equals(planner.getGoalNames().get(x)))
+				numChanges++;
 		}
-		if(!editsMade)
+		if(numChanges==0)
 			return true;
 		else{
 			String deletedGoals = "";
 			for(int x = 0;x < gEO.goalNameFields.size();x++){
 				if(gEO.goalNameFields.get(x).getText().equals(""))
-					deletedGoals += ("\t\t-" + planner.getGoalNames().get(x) + "\n");
+					deletedGoals += ("        -" + planner.getGoalNames().get(x) + "\n");
 			}
 			if(!deletedGoals.equals(""))//if any goals have been deleted
-				deletedGoals = "\n\tThe following goal(s) will be deleted:\n" + deletedGoals;
-			int response = JOptionPane.showOptionDialog(null, "Apply changes to goals?" + deletedGoals,
+				deletedGoals = "\n    The following goal(s) will be deleted:\n" + deletedGoals;
+			int response = JOptionPane.showOptionDialog(null, numChanges + " change(s) made to goals" + deletedGoals,
 				"Goal Edit Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.PLAIN_MESSAGE, null,
 				new String[]{"Apply changes", "Discard changes"}, "Apply changes");
 			return (response==0);

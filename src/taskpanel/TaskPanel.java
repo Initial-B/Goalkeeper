@@ -1,3 +1,6 @@
+//Brady Whytock
+//ITP 220 - final project
+
 package taskpanel;
 /*(component) JPanel with white bg, regular JLabels separated by dotted lines,
 	and a left side column for checkboxes

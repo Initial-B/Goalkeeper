@@ -1,3 +1,6 @@
+//Brady Whytock
+//ITP 220 - final project
+
 package taskpanel;
 //(component) colored checkBox, check toggles on-click
 

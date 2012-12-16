@@ -1,26 +1,25 @@
+//Brady Whytock
+//ITP 220 - final project
+
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.*;
 import java.awt.image.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.text.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import javax.swing.*;
 import javax.swing.filechooser.*;
 
+import calendarpanel.GkCalendarPanel;
+
 
 import taskpanel.*;
 
-import goalkeeper.calendar.GkCalendarPanel;
 import goalpanel.GoalPanel;
 
 
@@ -54,13 +53,11 @@ public class GkGUI extends JFrame{
 	
 	private ArrayList<Color> availableColors;
 	private ArrayList<ImageIcon> goalIcons;
-	private ImageIcon colorChoiceIcon;
-	private ArrayList<ColorChoicePanel> goalColorChoicePanels, taskColorChoicePanels;//used in changing item colors during edit mode
-	private ArrayList<JTextField> taskNameFields, goalNameFields;//used in changing item names during edit mode
 	
 	private JMenuBar menuBar;
 	private JMenu fileMenu;
-	private JMenuItem saveMenuItem, saveAsMenuItem, openMenuItem, newMenuItem;
+	private JMenuItem saveMenuItem, saveAsMenuItem, openMenuItem, newMenuItem, quitMenuItem;
+	private File lastSaveFile;
 	
 	private TaskPanel taskPanel;
 	private JLabel nameLabel;//displays planner name
@@ -74,7 +71,7 @@ public class GkGUI extends JFrame{
 	
 	private Planner planner;
 	private int guiDate;//yyyymmdd of currently displayed planner date
-	private String plannerFileName;
+	
 	private boolean taskEditEnabled, goalEditEnabled;
 	
 	public GkGUI(){
@@ -98,16 +95,26 @@ public class GkGUI extends JFrame{
 		fileMenu.setMnemonic(KeyEvent.VK_F);
 		menuBar.add(fileMenu);
 		
-		//configure loadMenuItem
+		//configure newMenuItem
+		newMenuItem = new JMenuItem("New");
+		newMenuItem.setMnemonic(KeyEvent.VK_N);
+		fileMenu.add(newMenuItem);
+		fileMenu.addSeparator();
+		newMenuItem.addActionListener(
+			new ActionListener(){ // anonymous inner class
+				public void actionPerformed(ActionEvent event){
+					newPlanner();
+				}
+		});
+		
+		//configure openMenuItem
 		openMenuItem = new JMenuItem("Open...");
 		openMenuItem.setMnemonic(KeyEvent.VK_O);
 		fileMenu.add(openMenuItem);
-		fileMenu.addSeparator();
 		openMenuItem.addActionListener(
 			new ActionListener(){ // anonymous inner class
 				public void actionPerformed(ActionEvent event){
 					loadPlanner();
-					setTitle("Goalkeeper - " + plannerFileName);
 				}
 		});
 		
@@ -115,7 +122,6 @@ public class GkGUI extends JFrame{
 		saveMenuItem = new JMenuItem("Save");
 		saveMenuItem.setMnemonic(KeyEvent.VK_S);
 		fileMenu.add(saveMenuItem);
-		fileMenu.addSeparator();
 		saveMenuItem.addActionListener(
 			new ActionListener(){ // anonymous inner class
 				public void actionPerformed(ActionEvent event){
@@ -131,7 +137,17 @@ public class GkGUI extends JFrame{
 			new ActionListener(){ // anonymous inner class
 				public void actionPerformed(ActionEvent event){
 					savePlannerAs();
-					setTitle("Goalkeeper - " + plannerFileName);
+				}
+		});
+		
+		//configure quitMenuItem
+		quitMenuItem = new JMenuItem("Exit");
+		fileMenu.add(quitMenuItem);
+		quitMenuItem.setMnemonic(KeyEvent.VK_X);
+		quitMenuItem.addActionListener(
+			new ActionListener(){
+				public void actionPerformed(ActionEvent event){
+					System.exit(0);
 				}
 		});
 		
@@ -163,20 +179,6 @@ public class GkGUI extends JFrame{
 		add(taskPanel);
 		TaskListener taskListener = new TaskListener();
 		taskPanel.addActionListener(taskListener);
-		taskNameFields = new ArrayList<JTextField>();//text fields used in edit mode
-		taskColorChoicePanels = new ArrayList<ColorChoicePanel>();//icons used in edit mode
-		for(int x = 0;x < taskPanel.getItems().size();x++){
-			//create text field for item in taskPanel
-			JTextField taskField = new JTextField();
-			taskField.setBounds(taskPanel.getItems().get(x).getBounds());//set bounds equal to task label's
-			taskField.setVisible(true);
-			taskNameFields.add(taskField);
-			//create color icon for item's checkbox
-			ColorChoicePanel colorPanel = new ColorChoicePanel();
-			colorPanel.setBounds(taskPanel.getCheckPanels().get(x).getBounds());
-			colorPanel.setVisible(true);
-			taskColorChoicePanels.add(colorPanel);
-		}
 		
 		//configure goalPanel (currently active goals display area)
 		goalPanel = new GoalPanel();
@@ -184,21 +186,18 @@ public class GkGUI extends JFrame{
 		goalPanel.setVisible(true);
 		add(goalPanel);
 		
-		
 		//instantiate misc. variables
 		goalIcons = new ArrayList<ImageIcon>();
 		availableColors = new ArrayList<Color>();
 		for(Color c : goalColors)//all colors initially available
 			availableColors.add(c);
-		ColorChoicePanel colorChoicePanel = new ColorChoicePanel();
-		colorChoiceIcon = createImageIcon(colorChoicePanel, 25, 25);
 		taskEditEnabled = false;
 		goalEditEnabled = false;
 		calendarPanel.ping();//get initially selected date to display (from calendarPanel)
 		
 		//configure newTaskButton
 		newTaskButton = new JButton("New Task");
-		newTaskButton.setBounds(310, 170, 104, 50);
+		newTaskButton.setBounds(310, 210, 104, 50);
 		newTaskButton.setVisible(true);
 		newTaskButton.addActionListener(
 			new ActionListener(){//(anonymous inner class) create newTask MessageDialog
@@ -226,7 +225,7 @@ public class GkGUI extends JFrame{
 		
 		//configure newGoalButton
 		newGoalButton = new JButton("New Goal");
-		newGoalButton.setBounds(416, 170, 104, 50);
+		newGoalButton.setBounds(416, 210, 104, 50);
 		newGoalButton.setVisible(true);
 		newGoalButton.addActionListener(new ActionListener(){//(anonymous inner class) create newGoal MessageDialog
 			JTextField goalNameField = new JTextField();
@@ -256,7 +255,7 @@ public class GkGUI extends JFrame{
 		
 		//configure editTasksButton
 		editTasksButton = new JButton("Edit Tasks");
-		editTasksButton.setBounds(310, 222, 210, 40);
+		editTasksButton.setBounds(310, 300, 210, 40);
 		editTasksButton.setVisible(true);
 		editTasksButton.addActionListener(new ActionListener(){// anonymous inner class
 			public void actionPerformed(ActionEvent event) {
@@ -279,7 +278,7 @@ public class GkGUI extends JFrame{
 		
 		//configure editGoalsButton
 		editGoalsButton = new JButton("Edit Goals");
-		editGoalsButton.setBounds(310, 264, 210, 40);
+		editGoalsButton.setBounds(310, 380, 210, 40);
 		editGoalsButton.setVisible(true);
 		editGoalsButton.addActionListener(new ActionListener(){// anonymous inner class
 			public void actionPerformed(ActionEvent event) {
@@ -302,20 +301,35 @@ public class GkGUI extends JFrame{
 		
 		//configure saveChangesButton
 		saveChangesButton = new JButton("Save Changes");
-		saveChangesButton.setBounds(310, 306, 210, 40);
+		saveChangesButton.setBounds(310, 460, 210, 40);
 		saveChangesButton.setVisible(true);
+		saveChangesButton.addActionListener(new ActionListener(){//(anonymous inner class) create newTask MessageDialog
+			public void actionPerformed(ActionEvent event){
+				if(taskEditEnabled||goalEditEnabled){
+					editOverlay.finalizeEdits();
+					calendarPanel.ping();
+					updateGoals();
+				}
+				savePlanner();
+			}
+		});
 		add(saveChangesButton);
-		
-		//configure goalTrackingButton
-		goalTrackingButton = new JButton("Goal Tracking");
-		goalTrackingButton.setBounds(310, 348, 210, 40);
-		goalTrackingButton.setVisible(true);
-		add(goalTrackingButton);
-
 	}
 	
 	//launch frame components
 	public void execute(){
+		//startup dialog
+		String[] buttons = {"New Planner", "Load Planner", "Exit"}; 
+		int response = JOptionPane.showOptionDialog(null, "Welcome to Goalkeeper!", "Goalkeeper",
+		        JOptionPane.PLAIN_MESSAGE, JOptionPane.PLAIN_MESSAGE, null, buttons, null);
+		if(response==2)
+			System.exit(0);
+		else if(response==1){
+			if(!loadPlanner())//if user cancels load planner dialog
+				execute();//restart goalkeeper
+		}else{
+			newPlanner();
+		}
 		setVisible(true);
 		for(Component c : getComponents())
 			c.setVisible(true);
@@ -360,7 +374,6 @@ public class GkGUI extends JFrame{
 		planner = p;
 		calendarPanel.ping();
 		nameLabel.setText(planner.getName());
-		setTitle(plannerFileName);
 		editOverlay = new EditOverlay(this);
 		updateGoals();
 	}
@@ -479,45 +492,80 @@ public class GkGUI extends JFrame{
 		}	
 	}
 	
+	//new planner dialog
+	public void newPlanner(){
+		String name = JOptionPane.showInputDialog(this, "Enter name:", 
+				"New Planner",JOptionPane.QUESTION_MESSAGE);
+		if(name==null)
+			execute();
+		else if(name.equals("")){
+			JOptionPane.showMessageDialog(this, "Name must be at least 1 character long");
+			execute();
+		}
+		Planner newPlanner = new Planner(name);
+		setPlanner(newPlanner);
+	}
+	
+	//save planner under most recent filename
 	public void savePlanner(){
 		try {
-			FileOutputStream saveFile = new FileOutputStream("Goalkeeper - " + planner.getName() + ".sav");
-			ObjectOutputStream save = new ObjectOutputStream(saveFile);
-			save.writeObject(planner);
-			save.close();
+			if(lastSaveFile!=null){
+				FileOutputStream saveFile = new FileOutputStream(lastSaveFile);
+				ObjectOutputStream save = new ObjectOutputStream(saveFile);
+				save.writeObject(planner);
+				save.close();
+			}
+			else//if no lastSaveFile, prompt saveDialog
+				savePlannerAs();
 		} catch (Exception e) {e.printStackTrace();}
 	}
 	
+	//save planner using saveDialog
 	public void savePlannerAs(){
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileFilter(new FileNameExtensionFilter("Goalkeeper save file (.sav)", "sav"));
+		try{chooser.setCurrentDirectory(lastSaveFile.getParentFile());}
+			catch(Exception e){}
 		int returnVal = chooser.showSaveDialog(this);
 		if(returnVal == JFileChooser.APPROVE_OPTION){
-			try{//TODO: save to specified directory
-				FileOutputStream saveFile = new FileOutputStream(chooser.getSelectedFile());
-				ObjectOutputStream save = new ObjectOutputStream(saveFile);
-				plannerFileName = chooser.getName(chooser.getSelectedFile());
+			try{
+				File saveFile = chooser.getSelectedFile().getAbsoluteFile();
+				FileOutputStream saveStream;
+				if(!saveFile.getAbsolutePath().endsWith(".sav"))//append file extension if missing
+					saveFile = new File(saveFile + ".sav");
+				saveStream = new FileOutputStream(saveFile);
+				ObjectOutputStream save = new ObjectOutputStream(saveStream);
+				lastSaveFile = saveFile;
+				setTitle("Goalkeeper - " + lastSaveFile.getName());
 				save.writeObject(planner);
 				save.close();
 			}catch(Exception e){e.printStackTrace();}
 		}
-		
 	}
 	
-	public void loadPlanner(){
+	//load a planner savefile into GkGUI
+	public boolean loadPlanner(){
 		JFileChooser chooser = new JFileChooser();
 		chooser.setFileFilter(new FileNameExtensionFilter("Goalkeeper save file (.sav)", "sav"));
+		try{chooser.setCurrentDirectory(lastSaveFile.getParentFile());}
+			catch(Exception e){}
 		int returnVal = chooser.showOpenDialog(this);
 	    if(returnVal == JFileChooser.APPROVE_OPTION){
 	    	try{
 	    		FileInputStream saveFile = new FileInputStream(chooser.getSelectedFile());
 	    		ObjectInputStream save = new ObjectInputStream(saveFile);
 	    		Planner loadedPlanner = (Planner)save.readObject();
-	    		plannerFileName = chooser.getName(chooser.getSelectedFile());
+	    		lastSaveFile = chooser.getSelectedFile().getAbsoluteFile();
+	    		setTitle("Goalkeeper - " + lastSaveFile.getName()); 
 	    		setPlanner(loadedPlanner);
 	    		save.close();
+	    		return true;
+	    	}catch (Exception e){
+	    		e.printStackTrace();
+	    		return true;
 	    	}
-	    	catch (Exception e) {e.printStackTrace();}
 	    }
+	    else 
+	    	return false;
 	}
 }

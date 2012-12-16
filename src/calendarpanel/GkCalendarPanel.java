@@ -1,8 +1,8 @@
-/*negligable bug: sometimes clicking on a combo box triggers two action events
-		to reproduce, click a faded NumPanel (to change month), then click textFields of yearBox, monthBox, yearBox (in that order)
+//Brady Whytock
+//ITP 220 - final project
 
-*/
-package goalkeeper.calendar;
+
+package calendarpanel;
 
 
 import java.awt.*;
